@@ -1,0 +1,5 @@
+httpx
+beautifulsoup4
+lxml
+python-telegram-bot==20.4
+flask
