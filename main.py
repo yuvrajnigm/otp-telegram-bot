@@ -436,8 +436,20 @@ def main():
         return
 
     # Create the bot application and enable the job queue
-application = Application.builder().token(YOUR_BOT_TOKEN).job_queue(True).build()
+# --- Main part to start the bot ---
+def main():
+    print("🚀 iVasms to Telegram Bot is starting...")
 
+    # ... (omitted admin check) ...
+    if not ADMIN_CHAT_IDS:
+        print("\n!!! 🔴 WARNING: You have not correctly set admin IDs in your ADMIN_CHAT_IDS list. !!!\n")
+        return
+
+    # 1. CORRECTION: job_queue(True) add karein
+    # Create the bot application
+    application = Application.builder().token(YOUR_BOT_TOKEN).job_queue(True).build()
+
+    # 2. CORRECTION: Indentation check karein. Ye saari lines ek hi level par honi chahiye.
     # Add command handlers
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("add_chat", add_chat_command))
