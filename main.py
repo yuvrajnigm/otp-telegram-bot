@@ -67,6 +67,18 @@ def extract_otp(text):
     m = re.search(r"\b\d{4,8}\b|\d{3}-\d{3}", text)
     return m.group(0) if m else "N/A"
 
+def mask_number(text):
+    # number extract (10–14 digit, + optional)
+    m = re.search(r"\+?\d{10,14}", text)
+    if not m:
+        return "Unknown"
+
+    num = m.group(0)
+
+    if len(num) <= 6:
+        return num
+
+    return num[:3] + "****" + num[-3:]
 
 def premium_message(source, otp, raw):
     clean_msg = re.sub("<.*?>", "", raw)[:1000]
