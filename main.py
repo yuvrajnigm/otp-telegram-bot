@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-import asyncio, re, os, json, threading, traceback
+
+import os
+import re
+import json
+import threading
+import traceback
 from datetime import datetime
 
 import httpx
@@ -8,6 +13,7 @@ from flask import Flask
 
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram import Update
+
 
 # ================= BASIC CONFIG =================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -24,28 +30,29 @@ INTS_PASS = os.getenv("INTS_PASS")
 
 STATE_FILE = "processed_sms_ids.json"
 POLL_INTERVAL = 3
-# ==============================================
+# ===============================================
 
 
-# ================= KEEP ALIVE ==================
-app_flask = Flask(__name__)
+# ================= KEEP ALIVE ===================
+flask_app = Flask(__name__)
 
-@app_flask.route("/")
+@flask_app.route("/")
 def home():
     return "Bot Alive"
 
 def run_flask():
-    app_flask.run(host="0.0.0.0", port=8080)
+    flask_app.run(host="0.0.0.0", port=8080)
 
 threading.Thread(target=run_flask, daemon=True).start()
-# ==============================================
+# ===============================================
 
 
 def load_state():
     if not os.path.exists(STATE_FILE):
         with open(STATE_FILE, "w") as f:
             json.dump({}, f)
-    return json.load(open(STATE_FILE))
+    with open(STATE_FILE, "r") as f:
+        return json.load(f)
 
 
 def save_state(data):
@@ -59,7 +66,8 @@ def extract_otp(text):
 
 
 def premium_message(source, otp, raw):
-    clean_msg = re.sub("<.*?>", "", raw)[:1000]
+    clean_msg = re.sub("<.*?>", "", raw)
+    clean_msg = clean_msg[:1000]
 
     return (
         f"🔔 <b>New OTP Received</b>\n\n"
@@ -71,17 +79,17 @@ def premium_message(source, otp, raw):
     )
 
 
-# ================= IVASMS ======================
+# ================= IVASMS =======================
 async def fetch_ivasms(client):
-    login = "https://www.ivasms.com/login"
-    panel = "https://www.ivasms.com/portal/sms/received"
+    login_url = "https://www.ivasms.com/login"
+    panel_url = "https://www.ivasms.com/portal/sms/received"
 
-    r = await client.get(login)
+    r = await client.get(login_url)
     soup = BeautifulSoup(r.text, "html.parser")
     token = soup.find("input", {"name": "_token"})["value"]
 
     await client.post(
-        login,
+        login_url,
         data={
             "email": IVASMS_USER,
             "password": IVASMS_PASS,
@@ -89,21 +97,24 @@ async def fetch_ivasms(client):
         },
     )
 
-    page = await client.get(panel)
+    page = await client.get(panel_url)
     return page.text
 
 
-# ================= 185 =========================
+# ================= 185 ==========================
 async def fetch_185(client):
     await client.post(
         "http://185.2.83.39/ints/login",
-        data={"username": INTS_USER, "password": INTS_PASS},
+        data={
+            "username": INTS_USER,
+            "password": INTS_PASS,
+        },
     )
     r = await client.get("http://185.2.83.39/ints/agent/SMSCDRStats")
     return r.text
 
 
-# ================= WORKER ======================
+# ================= WORKER =======================
 async def check_otps(context: ContextTypes.DEFAULT_TYPE):
     state = load_state()
 
@@ -144,7 +155,7 @@ async def check_otps(context: ContextTypes.DEFAULT_TYPE):
     save_state(state)
 
 
-# ================= BOT START ===================
+# ================= BOT START ====================
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
@@ -153,21 +164,15 @@ def main():
             await update.message.reply_text("✅ OTP Bot Running")
 
     application.add_handler(CommandHandler("start", start))
-    application.job_queue.run_repeating(check_otps, interval=POLL_INTERVAL, first=5)
+    application.job_queue.run_repeating(
+        check_otps,
+        interval=POLL_INTERVAL,
+        first=5
+    )
 
     print("🚀 OTP BOT STARTED")
     application.run_polling()
 
-
-if __name__ == "__main__":
-    main()
-            await update.message.reply_text("✅ OTP Bot Running")
-
-    app.add_handler(CommandHandler("start", start))
-    app.job_queue.run_repeating(check_otps, interval=POLL_INTERVAL, first=5)
-
-    print("🚀 OTP BOT STARTED")
-    app.run_polling()
 
 if __name__ == "__main__":
     main()
