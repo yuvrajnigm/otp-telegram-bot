@@ -84,21 +84,29 @@ async def fetch_ivasms(client):
     panel_url = "https://www.ivasms.com/portal/sms/received"
 
     r = await client.get(login_url)
-    soup = BeautifulSoup(r.text, "html.parser")
-    token = soup.find("input", {"name": "_token"})["value"]
 
-    await client.post(
-        login_url,
-        data={
-            "email": IVASMS_USER,
-            "password": IVASMS_PASS,
-            "_token": token,
-        },
-    )
+    token = None
+    try:
+        soup = BeautifulSoup(r.text, "html.parser")
+        token_tag = soup.find("input", {"name": "_token"})
+        if token_tag:
+            token = token_tag.get("value")
+    except Exception:
+        token = None
+
+    payload = {
+        "email": IVASMS_USER,
+        "password": IVASMS_PASS
+     
+
+    if token:
+        payload["_token"] = token
+
+    await client.post(login_url, data=payload)
 
     page = await client.get(panel_url)
-    return page.text
-
+    return page.txt
+    
 
 # ================= 185 ==========================
 async def fetch_185(client):
