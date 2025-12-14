@@ -95,7 +95,7 @@ def premium_message(source, otp, raw):
 # ================= IVASMS =======================
 async def fetch_ivasms(client):
     login_url = "https://www.ivasms.com/login"
-    panel_url = "https://www.ivasms.com/portal/sms/received"
+    panel_url = "panel_url = "https://www.ivasms.com/portal/live/my_sms"
 
     r = await client.get(login_url)
 
