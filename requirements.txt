@@ -1,5 +1,5 @@
-httpx
+httpx==0.24.1
 beautifulsoup4
 lxml
 flask
-python-telegram-bot[job-queue]==20.4
+python-telegram-bot==20.4
