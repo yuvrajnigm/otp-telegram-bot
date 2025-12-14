@@ -435,8 +435,8 @@ def main():
         print("\n!!! 🔴 WARNING: You have not correctly set admin IDs in your ADMIN_CHAT_IDS list. !!!\n")
         return
 
-    # Create the bot application
-    application = Application.builder().token(YOUR_BOT_TOKEN).build()
+    # Create the bot application and enable the job queue
+application = Application.builder().token(YOUR_BOT_TOKEN).job_queue(True).build()
 
     # Add command handlers
     application.add_handler(CommandHandler("start", start_command))
