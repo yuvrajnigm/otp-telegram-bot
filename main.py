@@ -1,11 +1,12 @@
+
 # -*- coding: utf-8 -*-
 
 import os
 import re
 import json
+import asyncio
 import threading
 import traceback
-import asyncio
 from datetime import datetime
 
 import httpx
@@ -20,6 +21,7 @@ from telegram import Update
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 ADMIN_IDS = ["8221767181", "8449115253"]
+
 GROUP_ID = -1003406789899
 OTP_CHANNEL = "@YUVRAJNUMERSOTP"
 
@@ -86,18 +88,15 @@ async def fetch_ivasms(client):
     r = await client.get(login_url)
 
     token = None
-    try:
-        soup = BeautifulSoup(r.text, "html.parser")
-        token_tag = soup.find("input", {"name": "_token"})
-        if token_tag:
-            token = token_tag.get("value")
-    except Exception:
-        token = None
+    soup = BeautifulSoup(r.text, "html.parser")
+    token_tag = soup.find("input", {"name": "_token"})
+    if token_tag:
+        token = token_tag.get("value")
 
     payload = {
         "email": IVASMS_USER,
         "password": IVASMS_PASS
-     
+    }
 
     if token:
         payload["_token"] = token
@@ -105,30 +104,23 @@ async def fetch_ivasms(client):
     await client.post(login_url, data=payload)
 
     page = await client.get(panel_url)
-    return page.txt
-    
+    return page.text
+
 
 # ================= 185 ==========================
 async def fetch_185(client):
     await client.post(
         "http://185.2.83.39/ints/login",
-        data={"username": INTS_USER, "password": INTS_PASS},
+        data={
+            "username": INTS_USER,
+            "password": INTS_PASS
+        }
     )
     r = await client.get("http://185.2.83.39/ints/agent/SMSCDRStats")
     return r.text
 
 
-# ================= OTP LOOP =====================
-async def otp_loop(application: Application):
-    await asyncio.sleep(5)
-    while True:
-        try:
-            await check_otps(application)
-        except Exception as e:
-            print("OTP LOOP ERROR:", e)
-        await asyncio.sleep(POLL_INTERVAL)
-
-
+# ================= OTP CHECK ====================
 async def check_otps(application: Application):
     state = load_state()
 
@@ -152,12 +144,12 @@ async def check_otps(application: Application):
                         await application.bot.send_message(
                             chat_id=GROUP_ID,
                             text=text,
-                            parse_mode="HTML",
+                            parse_mode="HTML"
                         )
                         await application.bot.send_message(
                             chat_id=OTP_CHANNEL,
                             text=text,
-                            parse_mode="HTML",
+                            parse_mode="HTML"
                         )
                     except Exception as e:
                         print("TELEGRAM SEND ERROR:", e)
@@ -167,6 +159,14 @@ async def check_otps(application: Application):
                 traceback.print_exc()
 
     save_state(state)
+
+
+# ================= BACKGROUND LOOP ==============
+async def otp_loop(application: Application):
+    await asyncio.sleep(5)
+    while True:
+        await check_otps(application)
+        await asyncio.sleep(POLL_INTERVAL)
 
 
 # ================= BOT START ====================
@@ -179,10 +179,10 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
 
-    async def on_startup(app):
+    async def post_init(app):
         asyncio.create_task(otp_loop(app))
 
-    application.post_init = on_startup
+    application.post_init = post_init
 
     print("🚀 OTP BOT STARTED")
     application.run_polling()
