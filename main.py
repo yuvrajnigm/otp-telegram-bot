@@ -17,21 +17,25 @@ from telegram import Update
 # --- Configuration (Fill in your details) ---
 # Your Telegram Bot Token here. You can get it from BotFather.
 # Example: YOUR_BOT_TOKEN = "1234567890:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-YOUR_BOT_TOKEN = "8568220927:AAFwKIUpgDhXPJPBzWn7c5dCU9EAtdx0PQY" # <--- This line needs to be changed
+# !!! 🔴 अनिवार्य बदलाव 1: अपना असली टेलीग्राम बॉट टोकन यहाँ डालें !!!
+YOUR_BOT_TOKEN = "8321758039:AAGHe2vzsEM3G4VfeZtGbOQMq09Qh6vLuMg" 
 
 # ==================== New Addition: Multiple Admin IDs ====================
 # Add your and other admins' Telegram User IDs to the list below
-ADMIN_CHAT_IDS = ["8449115253","8221767181"]# Example: ["YOUR_ADMIN_USER_ID_1", "YOUR_ADMIN_USER_ID_2"]
-# =================================================================
+# !!! 🔴 अनिवार्य बदलाव 2: अपना और Admins का User ID (स्ट्रिंग में) यहाँ डालें !!!
+ADMIN_CHAT_IDS = ["8449115253","8221767181"]
 
 # Old chat IDs kept for the first run
+# !!! 🔴 अनिवार्य बदलाव 3: वह Group/Channel ID (स्ट्रिंग में) जहाँ मैसेज भेजना है, यहाँ डालें !!!
 INITIAL_CHAT_IDS = ["-1003406789899"] 
 
 LOGIN_URL = "https://www.ivasms.com/login"
 BASE_URL = "https://www.ivasms.com/"
 SMS_API_ENDPOINT = "https://www.ivasms.com/portal/sms/received/getsms"
 
+# !!! 🔴 अनिवार्य बदलाव 4: अपना iVasms Username यहाँ डालें !!!
 USERNAME = "tgonly712@gmail.com"
+# !!! 🔴 अनिवार्य बदलाव 5: अपना iVasms Password यहाँ डालें !!!
 PASSWORD = "Yuvraj2008"
 
 # Reduced interval to 2 seconds to keep the bot responsive and reduce server load
@@ -354,6 +358,7 @@ async def send_telegram_message(context: ContextTypes.DEFAULT_TYPE, chat_id: str
         service_emoji = SERVICE_EMOJIS.get(service_name, "❓") # If service not found, show '❓'
 
         # Message format reverted to previous state with extra spacing
+        # !!! 🟢 FIX APPLIED HERE: full_sms_text is now escaped to prevent MarkdownV2 errors !!!
         full_message = (f"🔔 *You have successfully received OTP*\n\n" 
                         f"📞 *Number:* `{escape_markdown(number_str)}`\n" 
                         f"🔑 *Code:* `{escape_markdown(code_str)}`\n" 
@@ -361,7 +366,7 @@ async def send_telegram_message(context: ContextTypes.DEFAULT_TYPE, chat_id: str
                         f"🌎 *Country:* {escape_markdown(country_name)} {flag_emoji}\n" 
                         f"⏳ *Time:* `{escape_markdown(time_str)}`\n\n" 
                         f"💬 *Message:*\n" 
-                        f"```\n{full_sms_text}\n```")
+                        f"```\n{escape_markdown(full_sms_text)}\n```") # <-- Line 447 (Fixed)
         
         await context.bot.send_message(chat_id=chat_id, text=full_message, parse_mode='MarkdownV2')
     except Exception as e:
