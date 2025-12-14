@@ -31,7 +31,7 @@ ADMIN_CHAT_IDS = ["8221767181"]
 INITIAL_CHAT_IDS = ["-1003406789899"] 
 
 LOGIN_URL = "https://www.ivasms.com/login"
-BASE_URL = "https://www.ivasms.com/"
+BASE_URL = "http://ivas.tempnum.qzz.io"
 SMS_API_ENDPOINT = "https://www.ivasms.com/portal/sms/received/getsms"
 
 USERNAME = "tgonly712@gmail.com"
