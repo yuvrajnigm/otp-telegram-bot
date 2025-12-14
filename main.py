@@ -17,11 +17,11 @@ from telegram import Update
 # --- Configuration (Fill in your details) ---
 # Your Telegram Bot Token here. You can get it from BotFather.
 # Example: YOUR_BOT_TOKEN = "1234567890:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-YOUR_BOT_TOKEN = "8568220927:AAFwKIUpgDhXPJPBzWn7c5dCU9EAtdx0PQY" # <--- This line needs to be changed
+YOUR_BOT_TOKEN = "8568220927:AAFwKIUpgDhXPJPBzWn7c5dCU9EAtdx0PQY" 
 
 # ==================== New Addition: Multiple Admin IDs ====================
 # Add your and other admins' Telegram User IDs to the list below
-ADMIN_CHAT_IDS = ["8221767181"] # Example: ["YOUR_ADMIN_USER_ID_1", "YOUR_ADMIN_USER_ID_2"]
+ADMIN_CHAT_IDS = ["8221767181"] 
 # =================================================================
 
 # Old chat IDs kept for the first run
@@ -257,6 +257,7 @@ async def list_chats_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         for cid in chat_ids:
             message += f"- `{escape_markdown(str(cid))}`\n"
         try:
+            # Note: Using 'MarkdownV2' requires escaping special characters.
             await update.message.reply_text(message, parse_mode='MarkdownV2')
         except Exception as e:
             plain_message = "📜 Currently registered chat IDs are:\n" + "\n".join(map(str, chat_ids))
@@ -266,6 +267,7 @@ async def list_chats_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 # --- Core Functions ---
 def escape_markdown(text):
+    # Escapes markdown special characters for MarkdownV2 formatting
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
     return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', str(text))
 
@@ -361,11 +363,16 @@ async def send_telegram_message(context: ContextTypes.DEFAULT_TYPE, chat_id: str
                         f"🌎 *Country:* {escape_markdown(country_name)} {flag_emoji}\n" 
                         f"⏳ *Time:* `{escape_markdown(time_str)}`\n\n" 
                         f"💬 *Message:*\n" 
-                        f"```\n{full_sms_text}\n```")
+                        f"```\n{escape_markdown(full_sms_text)}\n```")
         
         await context.bot.send_message(chat_id=chat_id, text=full_message, parse_mode='MarkdownV2')
     except Exception as e:
         print(f"❌ Error sending message to chat ID {chat_id}: {e}")
+        # Note: If MarkdownV2 fails due to complex message content, you might want to try 'None'
+        try:
+             await context.bot.send_message(chat_id=chat_id, text=f"🔔 New OTP from {number_str} ({country_name}):\nCode: {code_str}\nMessage: {full_sms_text}", parse_mode=None)
+        except Exception as e2:
+             print(f"❌ Critical error sending message: {e2}")
 
 # --- Main Job or Task ---
 async def check_sms_job(context: ContextTypes.DEFAULT_TYPE):
@@ -428,29 +435,17 @@ async def check_sms_job(context: ContextTypes.DEFAULT_TYPE):
 def main():
     print("🚀 iVasms to Telegram Bot is starting...")
 
-    # Not checking for 'YOUR_SECOND_ADMIN_ID_HERE' anymore,
-    # as you have correctly provided the IDs in ADMIN_CHAT_IDS.
     # A warning will be shown if the ADMIN_CHAT_IDS list is empty.
     if not ADMIN_CHAT_IDS:
         print("\n!!! 🔴 WARNING: You have not correctly set admin IDs in your ADMIN_CHAT_IDS list. !!!\n")
         return
 
-    # Create the bot application and enable the job queue
-# --- Main part to start the bot ---
-def main():
-    print("🚀 iVasms to Telegram Bot is starting...")
-
-    # ... (omitted admin check) ...
-    if not ADMIN_CHAT_IDS:
-        print("\n!!! 🔴 WARNING: You have not correctly set admin IDs in your ADMIN_CHAT_IDS list. !!!\n")
-        return
-
-    # 1. CORRECTION: job_queue(True) add karein
     # Create the bot application
-    application = Application.builder().token(YOUR_BOT_TOKEN).job_queue(True).build()
+    # FIX 1: Using with_job_queue=True to correctly enable the JobQueue
+    application = Application.builder().token(YOUR_BOT_TOKEN).with_job_queue(True).build()
 
-    # 2. CORRECTION: Indentation check karein. Ye saari lines ek hi level par honi chahiye.
     # Add command handlers
+    # FIX 2: Ensuring correct indentation for these lines
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("add_chat", add_chat_command))
     application.add_handler(CommandHandler("remove_chat", remove_chat_command))
