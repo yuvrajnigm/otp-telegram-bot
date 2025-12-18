@@ -17,22 +17,22 @@ from telegram import Update
 # --- Configuration (Fill in your details) ---
 # Your Telegram Bot Token here. You can get it from BotFather.
 # Example: YOUR_BOT_TOKEN = "1234567890:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-YOUR_BOT_TOKEN = "8249334907:AAHuPTZAUBHhxIHAGOsXDL_nfblM_mlrp60" # <--- This line needs to be changed
+YOUR_BOT_TOKEN = "8201320016:AAFOo8GP3x9rSZ6Fv8A_w8YLJUigJ2dC3tk" # <--- This line needs to be changed
 
 # ==================== New Addition: Multiple Admin IDs ====================
 # Add your and other admins' Telegram User IDs to the list below
-ADMIN_CHAT_IDS = ["8221767181"] # Example: ["YOUR_ADMIN_USER_ID_1", "YOUR_ADMIN_USER_ID_2"]
+ADMIN_CHAT_IDS = ["7467609186"] # Example: ["YOUR_ADMIN_USER_ID_1", "YOUR_ADMIN_USER_ID_2"]
 # =================================================================
 
 # Old chat IDs kept for the first run
-INITIAL_CHAT_IDS = ["-1003406789899"] 
+INITIAL_CHAT_IDS = ["-1002709915375"] 
 
 LOGIN_URL = "https://ivas.tempnum.qzz.io/login"
 BASE_URL = "https://ivas.tempnum.qzz.io"
 SMS_API_ENDPOINT = "https://ivas.tempnum.qzz.io/portal/sms/received/getsms"
 
-USERNAME = "tgonly712@gmail.com"
-PASSWORD = "Yuvraj2008"
+USERNAME = "farukgoldenlife19@gmail.com"
+PASSWORD = "Farabi@12"
 
 # Reduced interval to 2 seconds to keep the bot responsive and reduce server load
 POLLING_INTERVAL_SECONDS = 2 
@@ -457,3 +457,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
