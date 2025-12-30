@@ -1,2 +1,4 @@
+flask
 requests
-beautifulsoup4
+phonenumbers
+python-telegram-bot==20.7
