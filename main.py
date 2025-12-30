@@ -1,105 +1,205 @@
-# dgroup_login.py
-# Requirements:
-#   pip install requests beautifulsoup4
-
+import re
+import time
+import os
+import sys
+import threading
+import datetime
 import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+import phonenumbers
+from phonenumbers import geocoder
+from flask import Flask
+from telegram import Bot
+from telegram.ext import Application, CommandHandler
 
-BASE = "https://d-group.stats.direct"
-LOGIN_PAGE = urljoin(BASE, "/user-management/auth/login")
+# ================= CONFIG =================
 
-# ====== Fill your credentials here ======
-USERNAME = "Yuvraj2008"
-PASSWORD = "Yuvraj2008"
-# =========================================
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")          # -1003406789899
+ADMIN_ID = 8449115253
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+CR_API_1_URL = "http://51.77.216.195/crapi/dgroup/viewstats"
+CR_API_2_URL = "http://147.135.212.197/crapi/had/viewstats"
+
+CR_API_1_TOKEN = os.getenv("CR_API_1_TOKEN")
+CR_API_2_TOKEN = os.getenv("CR_API_2_TOKEN")
+
+NUMBER_CHANNEL = "https://t.me/YUVRAJNUMBERS"
+
+SERVICE_EMOJI = {
+    "WHATSAPP": "🟢",
+    "GOOGLE": "🔵",
+    "TELEGRAM": "✈️",
+    "FACEBOOK": "🔷",
+    "INSTAGRAM": "📸",
+    "TWITTER": "🐦",
+    "MICROSOFT": "🪟",
+    "UNKNOWN": "❔"
 }
 
-def get_login_form_data(session):
-    r = session.get(LOGIN_PAGE, headers=HEADERS, timeout=20)
-    r.raise_for_status()
-    soup = BeautifulSoup(r.text, "html.parser")
-    form = soup.find("form", {"id": "login-form"}) or soup.find("form")
-    if not form:
-        raise RuntimeError("Login form not found on page.")
-    data = {}
-    # collect all inputs (including hidden CSRF)
-    for inp in form.find_all("input"):
-        name = inp.get("name")
-        if not name:
-            continue
-        # take existing value or empty string
-        data[name] = inp.get("value", "")
-    # fill username/password
-    # note: page uses names LoginForm[username] and LoginForm[password]
-    # keep existing keys, but override with our credentials
-    # try both common possibilities, but based on provided source:
-    uname_key = None
-    pwd_key = None
-    for key in data.keys():
-        if "user" in key.lower() and "pass" not in key.lower():
-            uname_key = key
-        if "pass" in key.lower():
-            pwd_key = key
-    # fallback to known names from the source
-    if not uname_key:
-        uname_key = "LoginForm[username]"
-    if not pwd_key:
-        pwd_key = "LoginForm[password]"
+# ================= INIT =================
 
-    data[uname_key] = USERNAME
-    data[pwd_key] = PASSWORD
+bot = Bot(token=BOT_TOKEN)
+app = Flask(__name__)
 
-    # Ensure rememberMe exists; default to 0 (unchecked) if not present
-    if "LoginForm[rememberMe]" not in data:
-        data["LoginForm[rememberMe]"] = "0"
+SEEN_OTPS = set()
+BOT_START_TIME = time.time()
+TOTAL_OTPS = 0
 
-    # form action (relative or absolute)
-    action = form.get("action") or LOGIN_PAGE
-    post_url = urljoin(LOGIN_PAGE, action)
-    method = (form.get("method") or "post").lower()
-    return post_url, method, data
+# ================= HELPERS =================
 
-def main():
-    sess = requests.Session()
+def admin_log(text):
     try:
-        post_url, method, payload = get_login_form_data(sess)
+        bot.send_message(chat_id=ADMIN_ID, text=f"🛠 BOT LOG:\n{text}")
+    except:
+        pass
+
+def detect_otp(message):
+    m = re.search(r'\b\d{3}[- ]?\d{3}\b|\b\d{4,6}\b', message)
+    return m.group().replace("-", "") if m else "N/A"
+
+def detect_service(message):
+    m = message.lower()
+    if "whatsapp" in m:
+        return "WHATSAPP"
+    if "google" in m:
+        return "GOOGLE"
+    if "telegram" in m:
+        return "TELEGRAM"
+    if "facebook" in m or "meta" in m:
+        return "FACEBOOK"
+    return "UNKNOWN"
+
+def mask_number(num):
+    if len(num) < 7:
+        return num
+    return num[:6] + "**" + num[-3:]
+
+def detect_country(number):
+    try:
+        p = phonenumbers.parse("+" + number)
+        country = geocoder.description_for_number(p, "en")
+        region = phonenumbers.region_code_for_number(p)
+        flag = "".join(chr(127397 + ord(c)) for c in region)
+        return country, flag
+    except:
+        return "Unknown", "🌍"
+
+# ================= CR API =================
+
+def fetch_from_cr_api(url, token):
+    try:
+        r = requests.get(url, params={
+            "token": token,
+            "records": 10
+        }, timeout=10)
+        j = r.json()
+        if j.get("status") != "success":
+            return []
+        return j.get("data", [])
     except Exception as e:
-        print("Error while preparing login form:", e)
+        admin_log(f"API fetch error: {e}")
+        return []
+
+def process_api_data(rows):
+    global TOTAL_OTPS
+
+    for row in rows:
+        try:
+            number = row.get("num", "")
+            message = row.get("message", "")
+            uid = f"{number}-{message}"
+
+            if uid in SEEN_OTPS:
+                continue
+            SEEN_OTPS.add(uid)
+
+            otp = detect_otp(message)
+            service = detect_service(message)
+            service_icon = SERVICE_EMOJI.get(service, "❔")
+            country, flag = detect_country(number)
+
+            masked = mask_number(number)
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            text = f"""
+✅ {service_icon} {flag} {country} | {service} OTP Received
+
+━━━━━━━━━━━━━━━
+📱 Number: {masked}
+🔑 OTP Code: {otp}
+🛠 Service: {service}
+🌍 Country: {flag} {country}
+⏰ Time: {now}
+━━━━━━━━━━━━━━━
+
+💬 Message:
+{message}
+
+📢 Numbers Channel:
+{NUMBER_CHANNEL}
+"""
+
+            bot.send_message(chat_id=CHAT_ID, text=text)
+            TOTAL_OTPS += 1
+
+        except Exception as e:
+            admin_log(f"Processing error: {e}")
+
+# ================= LOOP =================
+
+def auto_fetch_loop():
+    while True:
+        try:
+            d1 = fetch_from_cr_api(CR_API_1_URL, CR_API_1_TOKEN)
+            d2 = fetch_from_cr_api(CR_API_2_URL, CR_API_2_TOKEN)
+            process_api_data(d1)
+            process_api_data(d2)
+        except Exception as e:
+            admin_log(f"Loop error: {e}")
+        time.sleep(15)
+
+threading.Thread(target=auto_fetch_loop, daemon=True).start()
+
+# ================= ADMIN COMMANDS =================
+
+async def status_cmd(update, context):
+    if update.effective_user.id != ADMIN_ID:
         return
 
-    print("Submitting", method.upper(), "to", post_url)
-    # include referer header (some sites require it)
-    headers = HEADERS.copy()
-    headers["Referer"] = LOGIN_PAGE
+    uptime = int(time.time() - BOT_START_TIME)
+    h = uptime // 3600
+    m = (uptime % 3600) // 60
 
-    if method == "post":
-        resp = sess.post(post_url, data=payload, headers=headers, allow_redirects=True, timeout=20)
-    else:
-        resp = sess.get(post_url, params=payload, headers=headers, allow_redirects=True, timeout=20)
+    await update.message.reply_text(
+        f"📊 BOT STATUS\n\n"
+        f"✅ Status: ONLINE\n"
+        f"⏱ Uptime: {h}h {m}m\n"
+        f"📨 OTP Sent: {TOTAL_OTPS}\n"
+        f"🌍 Country Detect: ENABLED\n"
+        f"🔁 Duplicate Block: ENABLED\n"
+        f"⚠️ Error Mode: SILENT"
+    )
 
-    # show redirect history if any
-    if resp.history:
-        print("Redirect history (earliest -> latest):")
-        for i, h in enumerate(resp.history, 1):
-            loc = h.headers.get("Location", "(no Location header)")
-            print(f" {i}. {h.status_code} -> {loc}")
-    else:
-        print("No HTTP redirect history (server returned final page directly).")
+async def restart_cmd(update, context):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    await update.message.reply_text("♻️ Restarting bot…")
+    admin_log("Restart triggered")
+    os._exit(0)
 
-    print("\nFinal URL after login / redirect:")
-    print(resp.url)
+def run_commands():
+    app_bot = Application.builder().token(BOT_TOKEN).build()
+    app_bot.add_handler(CommandHandler("status", status_cmd))
+    app_bot.add_handler(CommandHandler("restart", restart_cmd))
+    app_bot.run_polling()
 
-    # small debug snippet (optional)
-    print("\n--- Page snippet (first 800 chars) ---")
-    snippet = resp.text[:800].replace("\n", " ")
-    print(snippet)
-    print("--- end snippet ---")
+threading.Thread(target=run_commands, daemon=True).start()
+
+# ================= KEEP ALIVE =================
+
+@app.route("/")
+def home():
+    return "OTP Bot Running"
 
 if __name__ == "__main__":
-    main()
+    app.run(host="0.0.0.0", port=8080)
