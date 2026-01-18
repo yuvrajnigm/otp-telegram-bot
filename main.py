@@ -483,8 +483,13 @@ def main():
 
     # Set the main job to run repeatedly at a specific interval
     job_queue = application.job_queue
-    job_queue.run_repeating(check_sms_job, interval=POLLING_INTERVAL_SECONDS, first=1)
-
+job_queue.run_repeating(
+    check_sms_job,
+    interval=POLLING_INTERVAL_SECONDS,
+    first=1,
+    max_instances=1,
+    coalesce=True
+)
     print(f"🚀 Checking for new messages every {POLLING_INTERVAL_SECONDS} seconds.")
     print("🤖 Bot is now online. Ready to listen for commands.")
     print("⚠️ Press Ctrl+C to stop the bot.")
