@@ -34,7 +34,7 @@ def keep_alive():
 # --- Configuration (Fill in your details) ---
 # Your Telegram Bot Token here. You can get it from BotFather.
 # Example: YOUR_BOT_TOKEN = "1234567890:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-YOUR_BOT_TOKEN = "8249334907:AAHPyJtRkSQUXCCaiSJSZ53TiLxhXuDZoz8" # <--- This line needs to be changed
+YOUR_BOT_TOKEN = "8249334907:AAGfohIOUVpbNNMrsIyNWfFVS8Qh2h7NrhE" # <--- This line needs to be changed
 
 # ==================== New Addition: Multiple Admin IDs ====================
 # Add your and other admins' Telegram User IDs to the list below
