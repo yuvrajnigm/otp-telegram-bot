@@ -52,7 +52,7 @@ USERNAME = "tgonly712@gmail.com"
 PASSWORD = "Yuvraj@2008"
 
 # Reduced interval to 2 seconds to keep the bot responsive and reduce server load
-POLLING_INTERVAL_SECONDS = 2 
+POLLING_INTERVAL_SECONDS = 5 
 # STATE_FILE name changed
 STATE_FILE = "processed_sms_ids.json" 
 CHAT_IDS_FILE = "chat_ids.json" # New file for saving chat IDs
